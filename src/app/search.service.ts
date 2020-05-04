@@ -1,5 +1,23 @@
 import { Injectable } from "@angular/core";
 
+function evento_wrapper(motivo: boolean) {
+  return function(
+    target: SearchService,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) {
+    let metodo_original = descriptor.value;
+    descriptor.value = function(...args: any[]) {
+      target["opera_evento_pesquisa"](motivo);
+      let result = metodo_original.apply(this, args);
+      result.then(r => {
+        target["opera_evento_pesquisa"](motivo);
+      });
+      return result;
+    };
+  };
+}
+
 function protectMethod(allowedCaller: string[]) {
   return function(target, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
@@ -33,7 +51,17 @@ export class SearchService {
   constructor() {}
 
   @protectMethod(["AppComponent.call_method"])
+  @evento_wrapper(true)
   method_service(v) {
-    console.log("service called ", v);
+    return new Promise(resolve => {
+      setTimeout(() => {
+        console.log("service called ", v);
+        resolve(true);
+      }, 1000);
+    });
+  }
+
+  private opera_evento_pesquisa(t) {
+    console.log('wrapper, ', t);
   }
 }
